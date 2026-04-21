@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IERC20 {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-}
-
 contract CeloDuels {
-    IERC20 public immutable cUSD;
     address public immutable feeRecipient;
 
-    uint256 public constant STAKE = 0.1 ether;
+    uint256 public constant STAKE = 0.001 ether;
     uint256 public constant FEE_BPS = 100;
     uint256 public constant TIMEOUT = 24 hours;
 
@@ -18,8 +12,8 @@ contract CeloDuels {
     enum Move { NONE, ROCK, PAPER, SCISSORS }
 
     struct Game {
-        address player1;
-        address player2;
+        address payable player1;
+        address payable player2;
         bytes32 hash1;
         bytes32 hash2;
         Move move1;
@@ -37,23 +31,22 @@ contract CeloDuels {
     event GameSettled(uint256 indexed gameId, address indexed winner, uint256 prize);
     event GameCancelled(uint256 indexed gameId);
 
-    constructor(address _cUSD, address _feeRecipient) {
-        cUSD = IERC20(_cUSD);
+    constructor(address _feeRecipient) {
         feeRecipient = _feeRecipient;
     }
 
-    function createGame(bytes32 _hash) external returns (uint256) {
-        require(cUSD.transferFrom(msg.sender, address(this), STAKE), "Transfer failed");
+    function createGame(bytes32 _hash) external payable returns (uint256) {
+        require(msg.value == STAKE, "Must send exactly 0.001 CELO");
 
         uint256 gameId = nextGameId++;
         games[gameId] = Game({
-            player1: msg.sender,
-            player2: address(0),
-            hash1: _hash,
-            hash2: bytes32(0),
-            move1: Move.NONE,
-            move2: Move.NONE,
-            state: GameState.CREATED,
+            player1:  payable(msg.sender),
+            player2:  payable(address(0)),
+            hash1:    _hash,
+            hash2:    bytes32(0),
+            move1:    Move.NONE,
+            move2:    Move.NONE,
+            state:    GameState.CREATED,
             joinedAt: 0
         });
 
@@ -61,15 +54,15 @@ contract CeloDuels {
         return gameId;
     }
 
-    function joinGame(uint256 _gameId, bytes32 _hash) external {
+    function joinGame(uint256 _gameId, bytes32 _hash) external payable {
         Game storage g = games[_gameId];
         require(g.state == GameState.CREATED, "Game not open");
         require(msg.sender != g.player1, "Cannot play yourself");
-        require(cUSD.transferFrom(msg.sender, address(this), STAKE), "Transfer failed");
+        require(msg.value == STAKE, "Must send exactly 0.001 CELO");
 
-        g.player2 = msg.sender;
-        g.hash2 = _hash;
-        g.state = GameState.JOINED;
+        g.player2  = payable(msg.sender);
+        g.hash2    = _hash;
+        g.state    = GameState.JOINED;
         g.joinedAt = block.timestamp;
 
         emit GameJoined(_gameId, msg.sender);
@@ -110,12 +103,12 @@ contract CeloDuels {
         g.state = GameState.CANCELLED;
 
         if (g.move1 != Move.NONE && g.move2 == Move.NONE) {
-            cUSD.transfer(g.player1, STAKE * 2);
+            g.player1.transfer(STAKE * 2);
         } else if (g.move2 != Move.NONE && g.move1 == Move.NONE) {
-            cUSD.transfer(g.player2, STAKE * 2);
+            g.player2.transfer(STAKE * 2);
         } else {
-            cUSD.transfer(g.player1, STAKE);
-            cUSD.transfer(g.player2, STAKE);
+            g.player1.transfer(STAKE);
+            g.player2.transfer(STAKE);
         }
 
         emit GameCancelled(_gameId);
@@ -126,16 +119,16 @@ contract CeloDuels {
         g.state = GameState.SETTLED;
 
         address winner = _determineWinner(g.player1, g.player2, g.move1, g.move2);
-        uint256 pot = STAKE * 2;
-        uint256 fee = (pot * FEE_BPS) / 10000;
+        uint256 pot   = STAKE * 2;
+        uint256 fee   = (pot * FEE_BPS) / 10000;
         uint256 prize = pot - fee;
 
         if (winner == address(0)) {
-            cUSD.transfer(g.player1, STAKE);
-            cUSD.transfer(g.player2, STAKE);
+            g.player1.transfer(STAKE);
+            g.player2.transfer(STAKE);
         } else {
-            cUSD.transfer(feeRecipient, fee);
-            cUSD.transfer(winner, prize);
+            payable(feeRecipient).transfer(fee);
+            payable(winner).transfer(prize);
         }
 
         emit GameSettled(_gameId, winner, prize);
@@ -144,8 +137,8 @@ contract CeloDuels {
     function _determineWinner(address p1, address p2, Move m1, Move m2) internal pure returns (address) {
         if (m1 == m2) return address(0);
         if (
-            (m1 == Move.ROCK && m2 == Move.SCISSORS) ||
-            (m1 == Move.PAPER && m2 == Move.ROCK) ||
+            (m1 == Move.ROCK     && m2 == Move.SCISSORS) ||
+            (m1 == Move.PAPER    && m2 == Move.ROCK)     ||
             (m1 == Move.SCISSORS && m2 == Move.PAPER)
         ) return p1;
         return p2;

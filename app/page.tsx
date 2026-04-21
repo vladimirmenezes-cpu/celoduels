@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { keccak256, encodePacked, parseEther } from "viem";
-import { useWriteContract } from "wagmi";
-import { CELODUELS_ADDRESS, CELODUELS_ABI, CUSD_ADDRESS, CUSD_ABI } from "./lib/contracts";
+import { useWriteContract, useSendTransaction } from "wagmi";
+import { CELODUELS_ADDRESS, CELODUELS_ABI } from "./lib/contracts";
 
 const Move = { ROCK: 1, PAPER: 2, SCISSORS: 3 } as const;
 type MoveType = (typeof Move)[keyof typeof Move];
@@ -30,33 +30,26 @@ export default function Home() {
   const [status, setStatus] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"create" | "join" | "reveal">("create");
 
-  const moveEmoji = { 1: "✊", 2: "✋", 3: "✌️" };
-  const moveName = { 1: "Pedra", 2: "Papel", 3: "Tesoura" };
+  const moveEmoji: Record<MoveType, string> = { 1: "✊", 2: "✋", 3: "✌️" };
+  const moveName: Record<MoveType, string> = { 1: "Pedra", 2: "Papel", 3: "Tesoura" };
 
   async function handleCreateGame() {
     if (!selectedMove) return setStatus("Escolha um move!");
     try {
-      setStatus("Aprovando cUSD...");
+      setStatus("Criando jogo...");
       const newSalt = generateSalt();
       setSalt(newSalt);
       const hash = generateHash(selectedMove, newSalt);
 
       await writeContractAsync({
-        address: CUSD_ADDRESS,
-        abi: CUSD_ABI,
-        functionName: "approve",
-        args: [CELODUELS_ADDRESS, parseEther("0.1")],
-      });
-
-      setStatus("Criando jogo...");
-      await writeContractAsync({
         address: CELODUELS_ADDRESS,
         abi: CELODUELS_ABI,
         functionName: "createGame",
         args: [hash],
+        value: parseEther("0.001"),
       });
 
-      setStatus(`Jogo criado! Seu salt: ${newSalt} — GUARDE ISSO!`);
+      setStatus(`Jogo criado! Salt: ${newSalt} — GUARDE ISSO!`);
     } catch (e: any) {
       setStatus(`Erro: ${e.message}`);
     }
@@ -65,27 +58,20 @@ export default function Home() {
   async function handleJoinGame() {
     if (!selectedMove || !gameId) return setStatus("Escolha um move e insira o Game ID!");
     try {
-      setStatus("Aprovando cUSD...");
+      setStatus("Entrando no jogo...");
       const newSalt = generateSalt();
       setSalt(newSalt);
       const hash = generateHash(selectedMove, newSalt);
 
       await writeContractAsync({
-        address: CUSD_ADDRESS,
-        abi: CUSD_ABI,
-        functionName: "approve",
-        args: [CELODUELS_ADDRESS, parseEther("0.1")],
-      });
-
-      setStatus("Entrando no jogo...");
-      await writeContractAsync({
         address: CELODUELS_ADDRESS,
         abi: CELODUELS_ABI,
         functionName: "joinGame",
         args: [BigInt(gameId), hash],
+        value: parseEther("0.001"),
       });
 
-      setStatus(`Entrou no jogo! Seu salt: ${newSalt} — GUARDE ISSO!`);
+      setStatus(`Entrou no jogo! Salt: ${newSalt} — GUARDE ISSO!`);
     } catch (e: any) {
       setStatus(`Erro: ${e.message}`);
     }
@@ -111,7 +97,7 @@ export default function Home() {
     return (
       <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-6">
         <h1 className="text-4xl font-bold">⚡ CeloDuels</h1>
-        <p className="text-gray-400">Desafie amigos em RPS por cUSD</p>
+        <p className="text-gray-400">Desafie amigos em RPS por CELO</p>
         <button
           onClick={() => connect({ connector: injected() })}
           className="bg-yellow-400 text-black font-bold px-8 py-4 rounded-2xl text-lg"
@@ -145,9 +131,9 @@ export default function Home() {
         </div>
 
         <div className="flex justify-center gap-4 mb-6">
-          {(Object.entries(Move) as [string, MoveType][]).map(([name, value]) => (
+          {([1, 2, 3] as MoveType[]).map((value) => (
             <button
-              key={name}
+              key={value}
               onClick={() => setSelectedMove(value)}
               className={`text-4xl p-4 rounded-2xl border-2 transition-all ${selectedMove === value ? "border-yellow-400 bg-yellow-400/10" : "border-gray-700 bg-gray-900"}`}
             >
@@ -181,7 +167,7 @@ export default function Home() {
           onClick={activeTab === "create" ? handleCreateGame : activeTab === "join" ? handleJoinGame : handleReveal}
           className="w-full bg-yellow-400 text-black font-bold py-4 rounded-2xl text-lg"
         >
-          {activeTab === "create" ? "Criar Duelo" : activeTab === "join" ? "Entrar no Duelo" : "Revelar Move"}
+          {activeTab === "create" ? "Criar Duelo (0.001 CELO)" : activeTab === "join" ? "Entrar no Duelo (0.001 CELO)" : "Revelar Move"}
         </button>
 
         {status && (

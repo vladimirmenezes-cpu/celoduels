@@ -1,18 +1,17 @@
 export const CELODUELS_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
-export const CUSD_ADDRESS = process.env.NEXT_PUBLIC_CUSD_ADDRESS as `0x${string}`;
 
 export const CELODUELS_ABI = [
   {
     name: "createGame",
     type: "function",
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     inputs: [{ name: "_hash", type: "bytes32" }],
     outputs: [{ name: "", type: "uint256" }],
   },
   {
     name: "joinGame",
     type: "function",
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     inputs: [
       { name: "_gameId", type: "uint256" },
       { name: "_hash", type: "bytes32" },
@@ -75,25 +74,5 @@ export const CELODUELS_ABI = [
       { name: "winner", type: "address", indexed: true },
       { name: "prize", type: "uint256", indexed: false },
     ],
-  },
-] as const;
-
-export const CUSD_ABI = [
-  {
-    name: "approve",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-  {
-    name: "balanceOf",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
   },
 ] as const;
