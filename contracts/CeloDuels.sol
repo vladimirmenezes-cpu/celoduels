@@ -21,9 +21,19 @@ contract CeloDuelsMulti {
         GameState state;
         GameType gameType;
         uint256 joinedAt;
+        uint256 createdAt;
+    }
+
+    struct GameView {
+        uint256 id;
+        address player1;
+        GameType gameType;
+        GameState state;
+        uint256 createdAt;
     }
 
     mapping(uint256 => Game) public games;
+    uint256[] public openGameIds;
     uint256 public nextGameId;
 
     event GameCreated(uint256 indexed gameId, address indexed player1, GameType gameType);
@@ -40,17 +50,19 @@ contract CeloDuelsMulti {
 
         uint256 gameId = nextGameId++;
         games[gameId] = Game({
-            player1:  payable(msg.sender),
-            player2:  payable(address(0)),
-            hash1:    _hash,
-            hash2:    bytes32(0),
-            move1:    0,
-            move2:    0,
-            state:    GameState.CREATED,
-            gameType: _gameType,
-            joinedAt: 0
+            player1:   payable(msg.sender),
+            player2:   payable(address(0)),
+            hash1:     _hash,
+            hash2:     bytes32(0),
+            move1:     0,
+            move2:     0,
+            state:     GameState.CREATED,
+            gameType:  _gameType,
+            joinedAt:  0,
+            createdAt: block.timestamp
         });
 
+        openGameIds.push(gameId);
         emit GameCreated(gameId, msg.sender, _gameType);
         return gameId;
     }
@@ -66,6 +78,7 @@ contract CeloDuelsMulti {
         g.state    = GameState.JOINED;
         g.joinedAt = block.timestamp;
 
+        _removeFromOpenGames(_gameId);
         emit GameJoined(_gameId, msg.sender);
     }
 
@@ -94,6 +107,18 @@ contract CeloDuelsMulti {
         }
     }
 
+    function cancelGame(uint256 _gameId) external {
+        Game storage g = games[_gameId];
+        require(g.state == GameState.CREATED, "Game not open");
+        require(msg.sender == g.player1, "Not your game");
+
+        g.state = GameState.CANCELLED;
+        _removeFromOpenGames(_gameId);
+        g.player1.transfer(STAKE);
+
+        emit GameCancelled(_gameId);
+    }
+
     function claimTimeout(uint256 _gameId) external {
         Game storage g = games[_gameId];
         require(g.state == GameState.JOINED || g.state == GameState.REVEALING, "Wrong state");
@@ -111,6 +136,40 @@ contract CeloDuelsMulti {
         }
 
         emit GameCancelled(_gameId);
+    }
+
+    function getOpenGames() external view returns (GameView[] memory) {
+        uint256 count = openGameIds.length;
+        GameView[] memory result = new GameView[](count);
+
+        for (uint256 i = 0; i < count; i++) {
+            uint256 id = openGameIds[i];
+            Game storage g = games[id];
+            result[i] = GameView({
+                id:        id,
+                player1:   g.player1,
+                gameType:  g.gameType,
+                state:     g.state,
+                createdAt: g.createdAt
+            });
+        }
+
+        return result;
+    }
+
+    function getGame(uint256 _gameId) external view returns (Game memory) {
+        return games[_gameId];
+    }
+
+    function _removeFromOpenGames(uint256 _gameId) internal {
+        uint256 len = openGameIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (openGameIds[i] == _gameId) {
+                openGameIds[i] = openGameIds[len - 1];
+                openGameIds.pop();
+                break;
+            }
+        }
     }
 
     function _settle(uint256 _gameId) internal {
@@ -138,7 +197,6 @@ contract CeloDuelsMulti {
         uint8 m2 = g.move2;
 
         if (g.gameType == GameType.RPS) {
-            // 1=Pedra 2=Papel 3=Tesoura
             if (m1 == m2) return address(0);
             if (
                 (m1 == 1 && m2 == 3) ||
@@ -149,41 +207,25 @@ contract CeloDuelsMulti {
         }
 
         if (g.gameType == GameType.COIN_FLIP) {
-            // 1=Cara 2=Coroa — quem acertar a mesma escolha que o oponente NÃO ganha
-            // Player1 escolhe, Player2 também escolhe — se igual empata, senão sorteia pelo hash
             if (m1 == m2) return address(0);
-            // Desempate deterministico pelo XOR dos hashes
             uint256 rand = uint256(g.hash1 ^ g.hash2);
             return rand % 2 == 0 ? g.player1 : g.player2;
         }
 
         if (g.gameType == GameType.ODD_EVEN) {
-            // Player1 escolhe PAR(1) ou IMPAR(2)
-            // Player2 escolhe um numero de 1 a 10
-            // A soma dos dois moves determina par ou impar
             uint8 sum = m1 + m2;
             bool isEven = sum % 2 == 0;
-            // Player1 apostou PAR=1, IMPAR=2
             if (isEven && g.move1 == 1) return g.player1;
             if (!isEven && g.move1 == 2) return g.player1;
             return g.player2;
         }
 
         if (g.gameType == GameType.DILEMMA) {
-            // Dilema do Prisioneiro
-            // 1=Cooperar 2=Trair
-            // Ambos cooperam = empate (dividem)
-            // Ambos traem = empate (dividem)
-            // Um trai e outro coopera = quem trai ganha tudo
             if (m1 == m2) return address(0);
-            if (m1 == 2) return g.player1; // P1 traiu
-            return g.player2;              // P2 traiu
+            if (m1 == 2) return g.player1;
+            return g.player2;
         }
 
         return address(0);
-    }
-
-    function getGame(uint256 _gameId) external view returns (Game memory) {
-        return games[_gameId];
     }
 }

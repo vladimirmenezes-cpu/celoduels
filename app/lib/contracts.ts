@@ -42,6 +42,39 @@ export const CELODUELS_ABI = [
     outputs: [],
   },
   {
+    name: "cancelGame",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_gameId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "claimTimeout",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_gameId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "getOpenGames",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "tuple[]",
+        components: [
+          { name: "id", type: "uint256" },
+          { name: "player1", type: "address" },
+          { name: "gameType", type: "uint8" },
+          { name: "state", type: "uint8" },
+          { name: "createdAt", type: "uint256" },
+        ],
+      },
+    ],
+  },
+  {
     name: "getGame",
     type: "function",
     stateMutability: "view",
@@ -60,16 +93,10 @@ export const CELODUELS_ABI = [
           { name: "state", type: "uint8" },
           { name: "gameType", type: "uint8" },
           { name: "joinedAt", type: "uint256" },
+          { name: "createdAt", type: "uint256" },
         ],
       },
     ],
-  },
-  {
-    name: "claimTimeout",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "_gameId", type: "uint256" }],
-    outputs: [],
   },
   {
     name: "GameCreated",

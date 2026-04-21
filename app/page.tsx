@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useAccount, useConnect, useDisconnect, usePublicClient } from "wagmi";
+import { useState, useEffect } from "react";
+import { useAccount, useConnect, useDisconnect, usePublicClient, useReadContract } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { keccak256, encodePacked, parseEther } from "viem";
 import { useWriteContract } from "wagmi";
@@ -67,6 +67,15 @@ const GAMES = [
   },
 ];
 
+const GAME_TYPE_NAMES: Record<number, string> = {
+  0: "✊ RPS",
+  1: "🪙 Cara ou Coroa",
+  2: "🔢 Par ou Ímpar",
+  3: "🔒 Dilema",
+};
+
+type Screen = "home" | "lobby" | "game";
+
 export default function Home() {
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
@@ -74,7 +83,7 @@ export default function Home() {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
 
-  const [screen, setScreen] = useState<"home" | "game">("home");
+  const [screen, setScreen] = useState<Screen>("home");
   const [selectedGame, setSelectedGame] = useState<typeof GAMES[0] | null>(null);
   const [selectedMove, setSelectedMove] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"create" | "join" | "reveal">("create");
@@ -84,6 +93,20 @@ export default function Home() {
   const [createdGameId, setCreatedGameId] = useState<string | null>(null);
   const [createdSalt, setCreatedSalt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+
+  const { data: openGames, refetch: refetchGames } = useReadContract({
+    address: CELODUELS_ADDRESS,
+    abi: CELODUELS_ABI,
+    functionName: "getOpenGames",
+  });
+
+  useEffect(() => {
+    if (screen === "lobby") {
+      const interval = setInterval(() => refetchGames(), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [screen]);
 
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
@@ -96,6 +119,7 @@ export default function Home() {
     setCreatedGameId(null);
     setCreatedSalt(null);
     setScreen("game");
+    setActiveTab("create");
   }
 
   async function handleCreateGame() {
@@ -116,7 +140,6 @@ export default function Home() {
 
       setStatus("Confirmando na blockchain...");
       const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
-
       const id = receipt.logs[0]?.topics[1]
         ? BigInt(receipt.logs[0].topics[1]).toString()
         : "0";
@@ -124,12 +147,25 @@ export default function Home() {
       setCreatedGameId(id);
       setCreatedSalt(newSalt);
       setSalt(newSalt);
-      setStatus("Jogo criado!");
+      setStatus("Jogo criado! Aguardando adversário...");
+      refetchGames();
     } catch (e: any) {
       setStatus(`Erro: ${e.shortMessage ?? e.message}`);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleJoinFromLobby(gId: string, gType: number) {
+    const game = GAMES.find((g) => g.type === gType);
+    if (!game) return;
+    setSelectedGame(game);
+    setJoiningId(gId);
+    setGameId(gId);
+    setScreen("game");
+    setActiveTab("join");
+    setSelectedMove(null);
+    setStatus(`Entrando no jogo #${gId}...`);
   }
 
   async function handleJoinGame() {
@@ -153,7 +189,9 @@ export default function Home() {
 
       setCreatedSalt(newSalt);
       setSalt(newSalt);
-      setStatus("Entrou no jogo! Guarde seu salt.");
+      setJoiningId(null);
+      setStatus("Entrou no jogo! Guarde seu salt para o Reveal.");
+      refetchGames();
     } catch (e: any) {
       setStatus(`Erro: ${e.shortMessage ?? e.message}`);
     } finally {
@@ -198,6 +236,61 @@ export default function Home() {
     );
   }
 
+  if (screen === "lobby") {
+    return (
+      <main className="min-h-screen bg-black text-white flex flex-col items-center p-6">
+        <div className="w-full max-w-md">
+          <div className="flex items-center gap-3 mb-6">
+            <button onClick={() => setScreen("home")} className="text-gray-400 text-2xl">‹</button>
+            <h1 className="text-xl font-bold">🎮 Partidas Abertas</h1>
+            <button
+              onClick={() => refetchGames()}
+              className="ml-auto text-xs text-gray-400 border border-gray-700 px-3 py-1 rounded-lg"
+            >
+              atualizar
+            </button>
+          </div>
+
+          {!openGames || openGames.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-4xl mb-4">🎯</p>
+              <p className="text-gray-400">Nenhuma partida aberta no momento.</p>
+              <p className="text-gray-600 text-sm mt-2">Crie um jogo e aguarde um adversário!</p>
+              <button
+                onClick={() => setScreen("home")}
+                className="mt-6 bg-yellow-400 text-black font-bold px-6 py-3 rounded-2xl"
+              >
+                Criar Jogo
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {(openGames as any[])
+                .filter((g) => g.player1.toLowerCase() !== address?.toLowerCase())
+                .map((g) => (
+                  <div key={g.id.toString()} className="bg-gray-900 border border-gray-700 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="flex-1">
+                      <div className="font-bold text-white">{GAME_TYPE_NAMES[Number(g.gameType)]}</div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        #{g.id.toString()} · {g.player1.slice(0, 6)}...{g.player1.slice(-4)}
+                      </div>
+                      <div className="text-xs text-yellow-400 mt-1">0.001 CELO em jogo</div>
+                    </div>
+                    <button
+                      onClick={() => handleJoinFromLobby(g.id.toString(), Number(g.gameType))}
+                      className="bg-yellow-400 text-black font-bold px-4 py-2 rounded-xl text-sm"
+                    >
+                      Entrar
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
   if (screen === "home") {
     return (
       <main className="min-h-screen bg-black text-white flex flex-col items-center p-6">
@@ -209,7 +302,19 @@ export default function Home() {
             </button>
           </div>
 
-          <p className="text-gray-400 mb-6 text-sm">Escolha um jogo para jogar</p>
+          <button
+            onClick={() => { setScreen("lobby"); refetchGames(); }}
+            className="w-full bg-gray-900 border border-yellow-400/40 rounded-2xl p-4 mb-6 flex items-center gap-3 hover:border-yellow-400 transition-all"
+          >
+            <span className="text-2xl">🎮</span>
+            <div className="text-left">
+              <div className="font-bold text-yellow-400">Buscar Partida</div>
+              <div className="text-xs text-gray-400">Ver jogos abertos e entrar</div>
+            </div>
+            <span className="ml-auto text-yellow-400 text-xl">›</span>
+          </button>
+
+          <p className="text-gray-400 mb-4 text-sm">Ou crie um novo jogo</p>
 
           <div className="flex flex-col gap-4">
             {GAMES.map((game) => (
@@ -237,7 +342,6 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center p-6">
       <div className="w-full max-w-md">
-
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => setScreen("home")} className="text-gray-400 text-2xl">‹</button>
           <span className="text-2xl">{selectedGame?.emoji}</span>
