@@ -6,16 +6,16 @@
 import "hardhat/types/artifacts";
 import type { GetContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
-import { CeloDuels$Type } from "./CeloDuels";
+import { CeloDuelsMulti$Type } from "./CeloDuelsMulti";
 
 declare module "hardhat/types/artifacts" {
   interface ArtifactsMap {
-    ["CeloDuels"]: CeloDuels$Type;
-    ["contracts/CeloDuels.sol:CeloDuels"]: CeloDuels$Type;
+    ["CeloDuelsMulti"]: CeloDuelsMulti$Type;
+    ["contracts/CeloDuels.sol:CeloDuelsMulti"]: CeloDuelsMulti$Type;
   }
 
   interface ContractTypesMap {
-    ["CeloDuels"]: GetContractReturnType<CeloDuels$Type["abi"]>;
-    ["contracts/CeloDuels.sol:CeloDuels"]: GetContractReturnType<CeloDuels$Type["abi"]>;
+    ["CeloDuelsMulti"]: GetContractReturnType<CeloDuelsMulti$Type["abi"]>;
+    ["contracts/CeloDuels.sol:CeloDuelsMulti"]: GetContractReturnType<CeloDuelsMulti$Type["abi"]>;
   }
 }
