@@ -45,7 +45,7 @@ export const CELODUELS_ABI = [
   {
     name: "submitNextRound",
     type: "function",
-    stateMutability: "payable",
+    stateMutability: "nonpayable",
     inputs: [
       { name: "_gameId", type: "uint256" },
       { name: "_hash", type: "bytes32" },
@@ -81,6 +81,7 @@ export const CELODUELS_ABI = [
           { name: "gameType", type: "uint8" },
           { name: "state", type: "uint8" },
           { name: "createdAt", type: "uint256" },
+          { name: "stake", type: "uint256" },
           { name: "bestOf3", type: "bool" },
         ],
       },
@@ -106,6 +107,7 @@ export const CELODUELS_ABI = [
           { name: "gameType", type: "uint8" },
           { name: "joinedAt", type: "uint256" },
           { name: "createdAt", type: "uint256" },
+          { name: "stake", type: "uint256" },
           { name: "wins1", type: "uint8" },
           { name: "wins2", type: "uint8" },
           { name: "draws", type: "uint8" },
@@ -122,15 +124,7 @@ export const CELODUELS_ABI = [
       { name: "gameId", type: "uint256", indexed: true },
       { name: "player1", type: "address", indexed: true },
       { name: "gameType", type: "uint8", indexed: false },
-    ],
-  },
-  {
-    name: "RoundSettled",
-    type: "event",
-    inputs: [
-      { name: "gameId", type: "uint256", indexed: true },
-      { name: "winner", type: "address", indexed: true },
-      { name: "round", type: "uint8", indexed: false },
+      { name: "stake", type: "uint256", indexed: false },
     ],
   },
   {

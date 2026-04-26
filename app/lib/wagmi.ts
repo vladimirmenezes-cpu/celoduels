@@ -1,22 +1,9 @@
 import { createConfig, http } from "wagmi";
-import { defineChain } from "viem";
-
-export const celoSepolia = defineChain({
-  id: 11142220,
-  name: "Celo Sepolia",
-  nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },
-  rpcUrls: {
-    default: { http: ["https://celo-sepolia.drpc.org"] },
-  },
-  blockExplorers: {
-    default: { name: "Blockscout", url: "https://celo-sepolia.blockscout.com" },
-  },
-  testnet: true,
-});
+import { celo } from "wagmi/chains";
 
 export const config = createConfig({
-  chains: [celoSepolia],
+  chains: [celo],
   transports: {
-    [celoSepolia.id]: http(),
+    [celo.id]: http(),
   },
 });

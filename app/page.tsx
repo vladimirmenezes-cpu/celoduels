@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAccount, useConnect, useDisconnect, usePublicClient, useReadContract, useBalance } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { keccak256, encodePacked, parseEther, formatEther } from "viem";
@@ -67,14 +67,14 @@ export default function Home() {
   const [selectedGame, setSelectedGame] = useState<typeof GAMES[0] | null>(null);
   const [selectedMove, setSelectedMove] = useState<number | null>(null);
   const [bestOf3, setBestOf3] = useState(false);
+  const [stakeAmount, setStakeAmount] = useState("0.001");
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState<"info" | "success" | "error" | "warning">("info");
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [joinGameId, setJoinGameId] = useState("");
-  const [isCreator, setIsCreator] = useState(false);
-  const [gameResult, setGameResult] = useState<{ wins1: number; wins2: number; draws: number; round: number; settled: boolean } | null>(null);
+  const [gameResult, setGameResult] = useState<{ wins1: number; wins2: number; settled: boolean } | null>(null);
 
   const { data: openGames, refetch: refetchGames } = useReadContract({
     address: CELODUELS_ADDRESS,
@@ -90,52 +90,35 @@ export default function Home() {
     query: { enabled: !!activeGameId, refetchInterval: 3000 },
   }) as any;
 
-  // Auto-reveal quando ambos jogadores entraram
   useEffect(() => {
     if (!activeGame || !activeGameId || !address) return;
     const state = Number(activeGame.state);
     const round = Number(activeGame.round);
 
-    // State 1 = JOINED — ambos commitaram, hora de revelar automaticamente
     if (state === 1) {
       const data = loadGameData(`${activeGameId}_r${round}`);
       if (data) {
-        setStatus("Adversário entrou! Revelando automaticamente...", );
+        setMsg("Adversário entrou! Revelando automaticamente...", "info");
         autoReveal(activeGameId, data.move, data.salt);
       }
     }
 
-    // State 3 = SETTLED
     if (state === 3) {
-      setGameResult({
-        wins1: Number(activeGame.wins1),
-        wins2: Number(activeGame.wins2),
-        draws: Number(activeGame.draws),
-        round: Number(activeGame.round),
-        settled: true,
-      });
+      const iAmP1 = activeGame.player1.toLowerCase() === address.toLowerCase();
+      const myWins = iAmP1 ? Number(activeGame.wins1) : Number(activeGame.wins2);
+      const theirWins = iAmP1 ? Number(activeGame.wins2) : Number(activeGame.wins1);
+      setGameResult({ wins1: Number(activeGame.wins1), wins2: Number(activeGame.wins2), settled: true });
       clearGameData(`${activeGameId}_r${round}`);
-      setStatus(
-        activeGame.player1.toLowerCase() === address.toLowerCase()
-          ? Number(activeGame.wins1) > Number(activeGame.wins2) ? "🏆 Você venceu!" : Number(activeGame.wins2) > Number(activeGame.wins1) ? "😔 Você perdeu." : "🤝 Empate!"
-          : Number(activeGame.wins2) > Number(activeGame.wins1) ? "🏆 Você venceu!" : Number(activeGame.wins1) > Number(activeGame.wins2) ? "😔 Você perdeu." : "🤝 Empate!",
-      );
-      setStatusType(
-        (activeGame.player1.toLowerCase() === address.toLowerCase() ? Number(activeGame.wins1) > Number(activeGame.wins2) : Number(activeGame.wins2) > Number(activeGame.wins1))
-          ? "success" : "error"
-      );
-      setScreen("playing");
+      if (myWins > theirWins) setMsg("🏆 Você venceu!", "success");
+      else if (theirWins > myWins) setMsg("😔 Você perdeu.", "error");
+      else setMsg("🤝 Empate!", "warning");
     }
 
-    // State 0 = CREATED e round > 1 = próxima rodada do bestOf3
-    if (state === 0 && round > 1) {
+    if (state === 0 && round > 1 && selectedMove) {
       const alreadySubmitted = activeGame.player1.toLowerCase() === address.toLowerCase()
         ? activeGame.hash1 !== "0x0000000000000000000000000000000000000000000000000000000000000000"
         : activeGame.hash2 !== "0x0000000000000000000000000000000000000000000000000000000000000000";
-
-      if (!alreadySubmitted && selectedMove) {
-        autoNextRound(activeGameId, selectedMove, round);
-      }
+      if (!alreadySubmitted) autoNextRound(activeGameId, selectedMove, round);
     }
   }, [activeGame]);
 
@@ -143,15 +126,12 @@ export default function Home() {
     try {
       const txHash = await writeContractAsync({
         address: CELODUELS_ADDRESS, abi: CELODUELS_ABI,
-        functionName: "revealMove",
-        args: [BigInt(gId), move, salt],
+        functionName: "revealMove", args: [BigInt(gId), move, salt],
       });
       await publicClient!.waitForTransactionReceipt({ hash: txHash });
-      setStatus("Move revelado! Aguardando resultado...", );
+      setMsg("Move revelado! Aguardando resultado...", "info");
       refetchActiveGame();
-    } catch (e: any) {
-      setStatus(`Erro no reveal: ${e.shortMessage ?? e.message}`, );
-    }
+    } catch (e: any) { setMsg(`Erro no reveal: ${e.shortMessage ?? e.message}`, "error"); }
   }
 
   async function autoNextRound(gId: string, move: number, round: number) {
@@ -159,19 +139,14 @@ export default function Home() {
       const newSalt = generateSalt();
       const hash = generateHash(move, newSalt);
       saveGameData(`${gId}_r${round}`, move, newSalt);
-
       const txHash = await writeContractAsync({
         address: CELODUELS_ADDRESS, abi: CELODUELS_ABI,
-        functionName: "submitNextRound",
-        args: [BigInt(gId), hash],
-        value: BigInt(0),
+        functionName: "submitNextRound", args: [BigInt(gId), hash],
       });
       await publicClient!.waitForTransactionReceipt({ hash: txHash });
-      setStatus(`Rodada ${round} iniciada! Aguardando adversário...`);
+      setMsg(`Rodada ${round} iniciada! Aguardando adversário...`, "info");
       refetchActiveGame();
-    } catch (e: any) {
-      setStatus(`Erro: ${e.shortMessage ?? e.message}`);
-    }
+    } catch (e: any) { setMsg(`Erro: ${e.shortMessage ?? e.message}`, "error"); }
   }
 
   function setMsg(msg: string, type: "info" | "success" | "error" | "warning" = "info") {
@@ -181,62 +156,62 @@ export default function Home() {
   function copy(text: string) { navigator.clipboard.writeText(text); }
 
   function goToGame(game: typeof GAMES[0]) {
-    setSelectedGame(game); setSelectedMove(null);
+    setSelectedGame(game); setSelectedMove(null); setJoinGameId("");
     setStatus(""); setActiveGameId(null); setGameResult(null);
-    setBestOf3(false); setScreen("game");
+    setBestOf3(false); setStakeAmount("0.001"); setScreen("game");
   }
 
   async function handleCreate() {
     if (!selectedMove || !selectedGame) return setMsg("Escolha um move!", "error");
+    const stakeWei = parseEther(stakeAmount || "0.001");
     try {
       setLoading(true); setMsg("Aguardando confirmação...");
       const newSalt = generateSalt();
       const hash = generateHash(selectedMove, newSalt);
-
       const txHash = await writeContractAsync({
         address: CELODUELS_ADDRESS, abi: CELODUELS_ABI,
         functionName: "createGame",
         args: [hash, selectedGame.type as GameType, bestOf3],
-        value: parseEther("0.001"),
+        value: stakeWei,
       });
-
       setMsg("Confirmando na blockchain...");
       const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
       const id = receipt.logs[0]?.topics[1] ? BigInt(receipt.logs[0].topics[1]).toString() : "0";
-
       saveGameData(`${id}_r1`, selectedMove, newSalt);
       setActiveGameId(id);
-      setIsCreator(true);
       setScreen("playing");
-      setMsg(`Duelo #${id} criado! Aguardando adversário...`, "info");
+      setMsg(`Duelo #${id} criado! Apostando ${stakeAmount} CELO. Aguardando adversário...`, "info");
       refetchGames();
     } catch (e: any) { setMsg(`Erro: ${e.shortMessage ?? e.message}`, "error"); }
     finally { setLoading(false); }
   }
 
-  async function handleJoin(gId?: string) {
+  async function handleJoin(gId?: string, stakeWei?: bigint) {
     const id = gId ?? joinGameId;
     if (!selectedMove || !id) return setMsg("Escolha um move e o Game ID!", "error");
     try {
       setLoading(true); setMsg("Entrando no duelo...");
+      let finalStake = stakeWei;
+      if (!finalStake) {
+        const gameData = await publicClient!.readContract({
+          address: CELODUELS_ADDRESS, abi: CELODUELS_ABI,
+          functionName: "getGame", args: [BigInt(id)],
+        }) as any;
+        finalStake = gameData.stake;
+      }
       const newSalt = generateSalt();
       const hash = generateHash(selectedMove, newSalt);
-
       const txHash = await writeContractAsync({
         address: CELODUELS_ADDRESS, abi: CELODUELS_ABI,
-        functionName: "joinGame",
-        args: [BigInt(id), hash],
-        value: parseEther("0.001"),
+        functionName: "joinGame", args: [BigInt(id), hash],
+        value: finalStake,
       });
-
       setMsg("Confirmando...");
       await publicClient!.waitForTransactionReceipt({ hash: txHash });
-
       saveGameData(`${id}_r1`, selectedMove, newSalt);
       setActiveGameId(id);
-      setIsCreator(false);
       setScreen("playing");
-      setMsg("Entrou! Revelando automaticamente...", "info");
+      setMsg(`Entrou! Apostando ${formatEther(finalStake!)} CELO. Revelando...`, "info");
       refetchGames();
       refetchActiveGame();
     } catch (e: any) { setMsg(`Erro: ${e.shortMessage ?? e.message}`, "error"); }
@@ -245,7 +220,6 @@ export default function Home() {
 
   const openCount = (openGames as any[])?.length ?? 0;
   const statusColors = { info: "#9CA3AF", success: "#22C55E", error: "#EF4444", warning: "#FACC15" };
-
   const fonts = `@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500&display=swap'); * { box-sizing: border-box; }`;
 
   const Sidebar = () => (
@@ -294,7 +268,7 @@ export default function Home() {
       {screen !== "dashboard" && (
         <button onClick={() => setScreen("dashboard")} style={{ background: "none", border: "1px solid #374151", color: "#9CA3AF", padding: "0.4rem 1rem", borderRadius: "0.5rem", cursor: "pointer", fontFamily: "DM Sans, sans-serif", fontSize: "0.85rem" }}>‹ Voltar</button>
       )}
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
+      <div style={{ marginLeft: "auto" }}>
         <div style={{ background: "#1A1B23", border: "1px solid #FACC1544", borderRadius: "0.75rem", padding: "0.5rem 1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span style={{ color: "#FACC15" }}>💰</span>
           <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, color: "#F9FAFB", fontSize: "1rem" }}>
@@ -314,7 +288,7 @@ export default function Home() {
           <p style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "1.1rem", marginTop: "0.5rem" }}>Minigames P2P · Blockchain Celo · 100% Justo</p>
         </div>
         <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", justifyContent: "center" }}>
-          {["⚡ Sem servidor", "🔒 Commit-Reveal", "💰 0.001 CELO"].map((f) => (
+          {["⚡ Sem servidor", "🔒 Commit-Reveal", "💰 Aposta livre"].map((f) => (
             <span key={f} style={{ color: "#9CA3AF", fontSize: "0.9rem", fontFamily: "DM Sans, sans-serif" }}>{f}</span>
           ))}
         </div>
@@ -329,17 +303,15 @@ export default function Home() {
   if (screen === "playing") {
     const game = selectedGame ?? GAMES[0];
     const gState = activeGame ? Number(activeGame.state) : -1;
-    const round = activeGame ? Number(activeGame.round) : 1;
-    const wins1 = activeGame ? Number(activeGame.wins1) : 0;
-    const wins2 = activeGame ? Number(activeGame.wins2) : 0;
     const iAmP1 = activeGame?.player1?.toLowerCase() === address?.toLowerCase();
-    const myWins = iAmP1 ? wins1 : wins2;
-    const theirWins = iAmP1 ? wins2 : wins1;
+    const myWins = activeGame ? (iAmP1 ? Number(activeGame.wins1) : Number(activeGame.wins2)) : 0;
+    const theirWins = activeGame ? (iAmP1 ? Number(activeGame.wins2) : Number(activeGame.wins1)) : 0;
     const settled = gState === 3;
+    const stakeDisplay = activeGame ? formatEther(activeGame.stake) : stakeAmount;
 
     return (
       <div style={{ display: "flex", height: "100vh", background: "#0B0E14", overflow: "hidden" }}>
-        <style>{fonts}</style>
+        <style>{fonts}{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         <Sidebar />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "auto" }}>
           <Header />
@@ -347,10 +319,11 @@ export default function Home() {
             <div style={{ textAlign: "center", marginBottom: "2rem" }}>
               <div style={{ fontSize: "4rem", marginBottom: "0.5rem" }}>{game.emoji}</div>
               <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "1.8rem", color: "#F9FAFB", margin: 0 }}>{game.name.toUpperCase()}</h2>
-              <p style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "0.85rem" }}>Duelo #{activeGameId}</p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "0.85rem" }}>
+                Duelo #{activeGameId} · <span style={{ color: game.color }}>🏆 Prêmio: {(parseFloat(stakeDisplay) * 2 * 0.99).toFixed(4)} CELO</span>
+              </p>
             </div>
 
-            {/* Score */}
             {activeGame?.bestOf3 && (
               <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "2rem", marginBottom: "2rem", background: "#0F1117", border: `1px solid ${game.color}44`, borderRadius: "1rem", padding: "1.25rem" }}>
                 <div style={{ textAlign: "center" }}>
@@ -365,27 +338,27 @@ export default function Home() {
               </div>
             )}
 
-            {/* Status */}
             <div style={{ background: "#0F1117", border: `1px solid ${statusColors[statusType]}44`, borderRadius: "1rem", padding: "1.5rem", textAlign: "center", marginBottom: "1.5rem" }}>
               {!settled && (
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
                   <div style={{ width: "40px", height: "40px", border: `3px solid ${game.color}`, borderTop: "3px solid transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
                 </div>
               )}
-              <p style={{ fontFamily: "DM Sans, sans-serif", color: statusColors[statusType], fontSize: "1rem", margin: 0 }}>{status || (gState === 0 ? "Aguardando adversário..." : gState === 1 ? "Adversário entrou! Revelando..." : gState === 2 ? "Aguardando reveal do adversário..." : "Processando...")}</p>
-              {settled && gameResult && (
+              <p style={{ fontFamily: "DM Sans, sans-serif", color: statusColors[statusType], fontSize: "1rem", margin: 0 }}>
+                {status || (gState === 0 ? "Aguardando adversário..." : gState === 1 ? "Revelando automaticamente..." : gState === 2 ? "Aguardando adversário revelar..." : "Processando...")}
+              </p>
+              {settled && (
                 <div style={{ marginTop: "1rem" }}>
-                  <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "3rem", color: statusType === "success" ? "#22C55E" : statusType === "error" ? "#EF4444" : "#FACC15" }}>
+                  <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "3rem", color: statusColors[statusType] }}>
                     {statusType === "success" ? "🏆 VITÓRIA!" : statusType === "error" ? "💀 DERROTA" : "🤝 EMPATE"}
                   </div>
                   <p style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "0.85rem", marginTop: "0.5rem" }}>
-                    {statusType === "success" ? "Você ganhou 0.00198 CELO!" : statusType === "error" ? "Mais sorte na próxima!" : "Valor devolvido."}
+                    {statusType === "success" ? `Você ganhou ${(parseFloat(stakeDisplay) * 2 * 0.99).toFixed(4)} CELO!` : statusType === "error" ? "Mais sorte na próxima!" : "Valor devolvido."}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Move escolhido */}
             {selectedMove && (
               <div style={{ background: "#0F1117", border: `1px solid ${game.color}33`, borderRadius: "1rem", padding: "1rem", textAlign: "center", marginBottom: "1rem" }}>
                 <p style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "0.75rem", margin: "0 0 0.5rem 0" }}>SEU MOVE</p>
@@ -394,7 +367,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Explorer link */}
             <a href={`https://celo-sepolia.blockscout.com/address/${CELODUELS_ADDRESS}`} target="_blank" rel="noreferrer"
               style={{ display: "block", textAlign: "center", fontFamily: "DM Sans, sans-serif", color: "#4B5563", fontSize: "0.8rem", textDecoration: "none", marginBottom: "1rem" }}>
               🔍 Ver contrato no Explorer ›
@@ -407,7 +379,6 @@ export default function Home() {
             )}
           </main>
         </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -427,7 +398,7 @@ export default function Home() {
             </div>
 
             {!openGames || (openGames as any[]).length === 0 ? (
-              <div style={{ textAlign: "center", padding: "4rem", color: "#4B5563" }}>
+              <div style={{ textAlign: "center", padding: "4rem" }}>
                 <p style={{ fontSize: "3rem", marginBottom: "1rem" }}>🎯</p>
                 <p style={{ fontFamily: "Rajdhani, sans-serif", fontSize: "1.2rem", color: "#6B7280" }}>Nenhuma partida aberta</p>
                 <button onClick={() => setScreen("dashboard")} style={{ marginTop: "1.5rem", background: "linear-gradient(90deg, #FACC15, #F59E0B)", color: "#0B0E14", fontFamily: "Rajdhani, sans-serif", fontWeight: 700, padding: "0.75rem 2rem", borderRadius: "0.75rem", border: "none", cursor: "pointer", fontSize: "1rem" }}>CRIAR JOGO</button>
@@ -440,6 +411,7 @@ export default function Home() {
                     const gType = Number(g.gameType);
                     const color = GAME_TYPE_COLORS[gType];
                     const game = GAMES.find((x) => x.type === gType);
+                    const stakeDisplay = formatEther(g.stake);
                     return (
                       <div key={g.id.toString()} style={{ background: "#0F1117", border: `1px solid ${color}33`, borderRadius: "1rem", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem" }}>
                         <span style={{ fontSize: "2rem" }}>{game?.emoji}</span>
@@ -447,16 +419,22 @@ export default function Home() {
                           <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, color: "#F9FAFB", fontSize: "1rem" }}>
                             {GAME_TYPE_NAMES[gType]} {g.bestOf3 && <span style={{ color, fontSize: "0.8rem" }}>· Melhor de 3</span>}
                           </div>
-                          <div style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "0.8rem" }}>#{g.id.toString()} · {g.player1.slice(0, 6)}...{g.player1.slice(-4)}</div>
+                          <div style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "0.8rem" }}>
+                            #{g.id.toString()} · {g.player1.slice(0, 6)}...{g.player1.slice(-4)}
+                          </div>
                         </div>
-                        <div style={{ fontFamily: "Rajdhani, sans-serif", color, fontWeight: 700, fontSize: "0.9rem" }}>0.001 CELO</div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontFamily: "Rajdhani, sans-serif", color, fontWeight: 700, fontSize: "1rem" }}>{stakeDisplay} CELO</div>
+                          <div style={{ fontFamily: "DM Sans, sans-serif", color: "#4B5563", fontSize: "0.75rem" }}>🏆 {(parseFloat(stakeDisplay) * 2 * 0.99).toFixed(4)} prêmio</div>
+                        </div>
                         <button
                           onClick={() => {
                             const foundGame = GAMES.find((x) => x.type === gType);
                             if (foundGame) {
-                              goToGame(foundGame);
+                              setSelectedGame(foundGame);
+                              setSelectedMove(null);
                               setJoinGameId(g.id.toString());
-                              setTimeout(() => setScreen("game"), 0);
+                              setScreen("game");
                             }
                           }}
                           style={{ background: color, color: "#0B0E14", fontFamily: "Rajdhani, sans-serif", fontWeight: 700, padding: "0.6rem 1.5rem", borderRadius: "0.75rem", border: "none", cursor: "pointer", fontSize: "0.95rem" }}>
@@ -473,7 +451,7 @@ export default function Home() {
     );
   }
 
-  // GAME SCREEN (escolher move)
+  // GAME SCREEN
   if (screen === "game") {
     const game = selectedGame ?? GAMES[0];
     return (
@@ -491,8 +469,10 @@ export default function Home() {
               </div>
             </div>
 
-            <p style={{ fontFamily: "DM Sans, sans-serif", color: "#9CA3AF", fontSize: "0.85rem", marginBottom: "1rem" }}>Escolha seu move — será ocultado até o adversário entrar</p>
-
+            {/* Moves */}
+            <p style={{ fontFamily: "DM Sans, sans-serif", color: "#9CA3AF", fontSize: "0.85rem", marginBottom: "1rem" }}>
+              {joinGameId ? "Escolha seu move para entrar no duelo" : "Escolha seu move — será ocultado até o adversário entrar"}
+            </p>
             <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
               {game.moves.map((m) => (
                 <button key={m.value} onClick={() => setSelectedMove(m.value)}
@@ -503,7 +483,28 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Melhor de 3 toggle */}
+            {/* Aposta — só ao criar */}
+            {!joinGameId && (
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ fontFamily: "DM Sans, sans-serif", color: "#9CA3AF", fontSize: "0.85rem", display: "block", marginBottom: "0.5rem" }}>Valor da aposta (CELO)</label>
+                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  {["0.001", "0.01", "0.1", "1"].map((v) => (
+                    <button key={v} onClick={() => setStakeAmount(v)}
+                      style={{ flex: 1, padding: "0.5rem", borderRadius: "0.5rem", border: `1px solid ${stakeAmount === v ? game.color : "#374151"}`, background: stakeAmount === v ? `${game.color}22` : "#0F1117", color: stakeAmount === v ? game.color : "#6B7280", fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                <input type="number" min="0.0001" max="10" step="0.0001"
+                  value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)}
+                  style={{ width: "100%", background: "#0F1117", border: `1px solid ${game.color}44`, borderRadius: "0.75rem", padding: "0.75rem 1rem", color: "#F9FAFB", fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "1.1rem", outline: "none", textAlign: "center" }} />
+                <p style={{ fontFamily: "DM Sans, sans-serif", color: "#4B5563", fontSize: "0.75rem", marginTop: "0.4rem", textAlign: "center" }}>
+                  Mín: 0.0001 · Máx: 10 CELO · 🏆 Prêmio: {(parseFloat(stakeAmount || "0") * 2 * 0.99).toFixed(4)} CELO
+                </p>
+              </div>
+            )}
+
+            {/* Melhor de 3 — só ao criar */}
             {!joinGameId && (
               <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem", background: "#0F1117", border: "1px solid #1F2937", borderRadius: "0.75rem", padding: "1rem" }}>
                 <div style={{ flex: 1 }}>
@@ -517,7 +518,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* Join ID se vier do lobby */}
+            {/* Info do jogo ao entrar pelo lobby */}
             {joinGameId && (
               <div style={{ background: "#0F1117", border: `1px solid ${game.color}44`, borderRadius: "0.75rem", padding: "1rem", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <span style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "0.85rem" }}>Entrando no duelo</span>
@@ -525,16 +526,17 @@ export default function Home() {
               </div>
             )}
 
+            {/* Input manual de ID se não veio do lobby */}
             {!joinGameId && (
               <input type="text" placeholder="Ou cole o Game ID para entrar num duelo existente"
-                value={joinGameId} onChange={(e) => setJoinGameId(e.target.value)}
+                onChange={(e) => setJoinGameId(e.target.value)}
                 style={{ width: "100%", background: "#0F1117", border: "1px solid #1F2937", borderRadius: "0.75rem", padding: "0.875rem 1rem", color: "#F9FAFB", fontFamily: "DM Sans, sans-serif", fontSize: "0.9rem", marginBottom: "1rem", outline: "none" }} />
             )}
 
             <button disabled={loading || !selectedMove}
               onClick={() => joinGameId ? handleJoin() : handleCreate()}
               style={{ width: "100%", padding: "1rem", borderRadius: "0.875rem", border: "none", cursor: loading || !selectedMove ? "not-allowed" : "pointer", background: loading || !selectedMove ? "#374151" : `linear-gradient(90deg, ${game.color}, ${game.color}CC)`, color: "#0B0E14", fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "1.1rem", letterSpacing: "0.05em", transition: "all 0.2s", boxShadow: loading || !selectedMove ? "none" : `0 0 30px ${game.color}44` }}>
-              {loading ? "PROCESSANDO..." : joinGameId ? `ENTRAR NO DUELO #${joinGameId} · 0.001 CELO` : `CRIAR DUELO · 0.001 CELO${bestOf3 ? " · MELHOR DE 3" : ""}`}
+              {loading ? "PROCESSANDO..." : joinGameId ? `ENTRAR NO DUELO #${joinGameId}` : `CRIAR DUELO · ${stakeAmount} CELO${bestOf3 ? " · MELHOR DE 3" : ""}`}
             </button>
 
             {status && (
@@ -558,7 +560,7 @@ export default function Home() {
         <main style={{ padding: "2rem", flex: 1 }}>
           <div style={{ marginBottom: "2rem" }}>
             <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "2.5rem", color: "#F9FAFB", margin: 0 }}>CRIAR NOVO DUELO</h2>
-            <p style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", marginTop: "0.25rem" }}>Taxa de 1% · Contrato verificado · Resultado 100% onchain</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", marginTop: "0.25rem" }}>Taxa de 1% · Contrato verificado · Aposta livre · Resultado 100% onchain</p>
           </div>
 
           <button onClick={() => { setScreen("lobby"); refetchGames(); }}
@@ -578,14 +580,14 @@ export default function Home() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
             {GAMES.map((game) => (
               <button key={game.type} onClick={() => goToGame(game)}
-                style={{ background: `linear-gradient(135deg, ${game.colorDim}, #0F1117)`, border: `1px solid ${game.color}44`, borderRadius: "1rem", padding: "1.5rem", textAlign: "left", cursor: "pointer", transition: "all 0.2s", backdropFilter: "blur(10px)" }}
+                style={{ background: `linear-gradient(135deg, ${game.colorDim}, #0F1117)`, border: `1px solid ${game.color}44`, borderRadius: "1rem", padding: "1.5rem", textAlign: "left", cursor: "pointer", transition: "all 0.2s" }}
                 onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.boxShadow = `0 0 30px ${game.color}33`; e.currentTarget.style.borderColor = `${game.color}88`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = `${game.color}44`; }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>{game.emoji}</div>
                 <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, color: "#F9FAFB", fontSize: "1.1rem", marginBottom: "0.25rem" }}>{game.name}</div>
                 <div style={{ fontFamily: "DM Sans, sans-serif", color: "#6B7280", fontSize: "0.8rem", marginBottom: "1rem" }}>{game.description}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontFamily: "Rajdhani, sans-serif", color: game.color, fontWeight: 700, fontSize: "0.9rem" }}>0.001 CELO</span>
+                  <span style={{ fontFamily: "Rajdhani, sans-serif", color: game.color, fontWeight: 700, fontSize: "0.9rem" }}>Aposta livre</span>
                   <span style={{ color: game.color, fontSize: "1.2rem" }}>›</span>
                 </div>
               </button>
