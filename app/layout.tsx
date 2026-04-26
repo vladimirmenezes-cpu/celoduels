@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <meta name="talentapp:project_verification" content="a4c493933a3e827a06c621863cd0a3c9956d223ab5b" />
+        <meta name="talentapp:project_verification" content="a4c493933a3e827a06c621863cd0a3c9956d223ab5b4653bfa35b802cc5df20ee12fce832f15905e9c7f618a083ea072e4fa57a39229719504594635301145c7" />
       </head>
       <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <WagmiProvider config={config}>
