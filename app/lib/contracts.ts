@@ -69,6 +69,7 @@ export const CELODUELS_ABI = [
           { name: "player1", type: "address" },
           { name: "gameType", type: "uint8" },
           { name: "state", type: "uint8" },
+          { name: "stake", type: "uint256" },
           { name: "createdAt", type: "uint256" },
         ],
       },
@@ -92,6 +93,7 @@ export const CELODUELS_ABI = [
           { name: "move2", type: "uint8" },
           { name: "state", type: "uint8" },
           { name: "gameType", type: "uint8" },
+          { name: "stake", type: "uint256" },
           { name: "joinedAt", type: "uint256" },
           { name: "createdAt", type: "uint256" },
         ],
@@ -105,6 +107,7 @@ export const CELODUELS_ABI = [
       { name: "gameId", type: "uint256", indexed: true },
       { name: "player1", type: "address", indexed: true },
       { name: "gameType", type: "uint8", indexed: false },
+      { name: "stake", type: "uint256", indexed: false },
     ],
   },
   {

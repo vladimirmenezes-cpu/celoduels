@@ -4,7 +4,8 @@ pragma solidity ^0.8.28;
 contract CeloDuelsMulti {
     address public immutable feeRecipient;
 
-    uint256 public constant STAKE = 0.001 ether;
+    uint256 public constant MIN_STAKE = 0.001 ether;
+    uint256 public constant MAX_STAKE = 1 ether;
     uint256 public constant FEE_BPS = 100;
     uint256 public constant TIMEOUT = 24 hours;
 
@@ -20,6 +21,7 @@ contract CeloDuelsMulti {
         uint8 move2;
         GameState state;
         GameType gameType;
+        uint256 stake;
         uint256 joinedAt;
         uint256 createdAt;
     }
@@ -29,6 +31,7 @@ contract CeloDuelsMulti {
         address player1;
         GameType gameType;
         GameState state;
+        uint256 stake;
         uint256 createdAt;
     }
 
@@ -36,7 +39,7 @@ contract CeloDuelsMulti {
     uint256[] public openGameIds;
     uint256 public nextGameId;
 
-    event GameCreated(uint256 indexed gameId, address indexed player1, GameType gameType);
+    event GameCreated(uint256 indexed gameId, address indexed player1, GameType gameType, uint256 stake);
     event GameJoined(uint256 indexed gameId, address indexed player2);
     event GameSettled(uint256 indexed gameId, address indexed winner, uint256 prize);
     event GameCancelled(uint256 indexed gameId);
@@ -46,7 +49,7 @@ contract CeloDuelsMulti {
     }
 
     function createGame(bytes32 _hash, GameType _gameType) external payable returns (uint256) {
-        require(msg.value == STAKE, "Must send exactly 0.001 CELO");
+        require(msg.value >= MIN_STAKE && msg.value <= MAX_STAKE, "Stake out of range");
 
         uint256 gameId = nextGameId++;
         games[gameId] = Game({
@@ -58,12 +61,13 @@ contract CeloDuelsMulti {
             move2:     0,
             state:     GameState.CREATED,
             gameType:  _gameType,
+            stake:     msg.value,
             joinedAt:  0,
             createdAt: block.timestamp
         });
 
         openGameIds.push(gameId);
-        emit GameCreated(gameId, msg.sender, _gameType);
+        emit GameCreated(gameId, msg.sender, _gameType, msg.value);
         return gameId;
     }
 
@@ -71,7 +75,7 @@ contract CeloDuelsMulti {
         Game storage g = games[_gameId];
         require(g.state == GameState.CREATED, "Game not open");
         require(msg.sender != g.player1, "Cannot play yourself");
-        require(msg.value == STAKE, "Must send exactly 0.001 CELO");
+        require(msg.value == g.stake, "Must match stake");
 
         g.player2  = payable(msg.sender);
         g.hash2    = _hash;
@@ -114,7 +118,7 @@ contract CeloDuelsMulti {
 
         g.state = GameState.CANCELLED;
         _removeFromOpenGames(_gameId);
-        g.player1.transfer(STAKE);
+        g.player1.transfer(g.stake);
 
         emit GameCancelled(_gameId);
     }
@@ -127,12 +131,12 @@ contract CeloDuelsMulti {
         g.state = GameState.CANCELLED;
 
         if (g.move1 != 0 && g.move2 == 0) {
-            g.player1.transfer(STAKE * 2);
+            g.player1.transfer(g.stake * 2);
         } else if (g.move2 != 0 && g.move1 == 0) {
-            g.player2.transfer(STAKE * 2);
+            g.player2.transfer(g.stake * 2);
         } else {
-            g.player1.transfer(STAKE);
-            g.player2.transfer(STAKE);
+            g.player1.transfer(g.stake);
+            g.player2.transfer(g.stake);
         }
 
         emit GameCancelled(_gameId);
@@ -141,7 +145,6 @@ contract CeloDuelsMulti {
     function getOpenGames() external view returns (GameView[] memory) {
         uint256 count = openGameIds.length;
         GameView[] memory result = new GameView[](count);
-
         for (uint256 i = 0; i < count; i++) {
             uint256 id = openGameIds[i];
             Game storage g = games[id];
@@ -150,10 +153,10 @@ contract CeloDuelsMulti {
                 player1:   g.player1,
                 gameType:  g.gameType,
                 state:     g.state,
+                stake:     g.stake,
                 createdAt: g.createdAt
             });
         }
-
         return result;
     }
 
@@ -177,13 +180,13 @@ contract CeloDuelsMulti {
         g.state = GameState.SETTLED;
 
         address winner = _determineWinner(g);
-        uint256 pot   = STAKE * 2;
+        uint256 pot   = g.stake * 2;
         uint256 fee   = (pot * FEE_BPS) / 10000;
         uint256 prize = pot - fee;
 
         if (winner == address(0)) {
-            g.player1.transfer(STAKE);
-            g.player2.transfer(STAKE);
+            g.player1.transfer(g.stake);
+            g.player2.transfer(g.stake);
         } else {
             payable(feeRecipient).transfer(fee);
             payable(winner).transfer(prize);
@@ -198,20 +201,14 @@ contract CeloDuelsMulti {
 
         if (g.gameType == GameType.RPS) {
             if (m1 == m2) return address(0);
-            if (
-                (m1 == 1 && m2 == 3) ||
-                (m1 == 2 && m2 == 1) ||
-                (m1 == 3 && m2 == 2)
-            ) return g.player1;
+            if ((m1 == 1 && m2 == 3) || (m1 == 2 && m2 == 1) || (m1 == 3 && m2 == 2)) return g.player1;
             return g.player2;
         }
-
         if (g.gameType == GameType.COIN_FLIP) {
             if (m1 == m2) return address(0);
             uint256 rand = uint256(g.hash1 ^ g.hash2);
             return rand % 2 == 0 ? g.player1 : g.player2;
         }
-
         if (g.gameType == GameType.ODD_EVEN) {
             uint8 sum = m1 + m2;
             bool isEven = sum % 2 == 0;
@@ -219,13 +216,11 @@ contract CeloDuelsMulti {
             if (!isEven && g.move1 == 2) return g.player1;
             return g.player2;
         }
-
         if (g.gameType == GameType.DILEMMA) {
             if (m1 == m2) return address(0);
             if (m1 == 2) return g.player1;
             return g.player2;
         }
-
         return address(0);
     }
 }
