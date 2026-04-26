@@ -76,6 +76,12 @@ export default function Home() {
   const [joinGameId, setJoinGameId] = useState("");
   const [savedSalt, setSavedSalt] = useState<string | null>(null);
 
+useEffect(() => {
+  if (typeof window !== "undefined" && (window as any).ethereum?.isMiniPay) {
+    connect({ connector: injected() });
+  }
+}, []);
+
   const { data: openGames, refetch: refetchGames } = useReadContract({
     address: CELODUELS_ADDRESS,
     abi: CELODUELS_ABI,
