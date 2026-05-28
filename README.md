@@ -1,36 +1,171 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+# 🚲 GIRO
 
-First, run the development server:
+**Quanto mais você pedala, mais a cidade responde.**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+[![Status](https://img.shields.io/badge/status-em%20desenvolvimento-00B6A9?style=for-the-badge)]()
+[![Plataforma](https://img.shields.io/badge/plataforma-mobile-FF6800?style=for-the-badge)]()
+[![Cidade](https://img.shields.io/badge/cidade-Salvador%20(BA)-FFC400?style=for-the-badge)]()
+
+[🌐 Acessar o Projeto](https://giro-app-vtib.vercel.app/onboarding)
+
+</div>
+
+---
+
+## 📖 Sobre o Projeto
+
+O **GIRO** é um aplicativo mobile gamificado que transforma a cidade em um grande tabuleiro vivo. Usando a bicicleta como principal meio de interação, os usuários conquistam e defendem **territórios urbanos reais**, participam de desafios e interagem socialmente enquanto pedalam.
+
+O foco não é performance esportiva — é **presença, frequência e interação social**.
+
+> Cidade inicial: **Salvador (BA)**
+
+---
+
+## 🎮 Modos de Jogo
+
+### 🟢 Modo Livre
+Ideal para iniciantes. Permite explorar a cidade, completar desafios, ganhar XP e socializar, sem pressão de disputa territorial.
+
+### 🔴 Modo Território
+O modo principal. Territórios possuem donos (jogadores ou clãs). Quanto mais tempo você pedala em uma área, mais forte o seu domínio se torna. Constância vale mais do que velocidade.
+
+---
+
+## 🗺️ Sistema de Territórios
+
+Cada território possui:
+
+- **Dono** — jogador ou clã
+- **Nível de domínio** — de 1 a 10
+- **Estado** — 🟢 Estável · 🟡 Em disputa · 🔴 Vulnerável
+
+| Ação | Regra |
+|------|-------|
+| Conquista inicial | 5 minutos pedalando na área |
+| Proteção inicial | 15 minutos após conquista |
+| Fortalecimento | +1 ponto de força a cada 5 min ativos |
+| Subir de nível | A cada 6 pontos de força acumulados |
+| Decaimento | −1 ponto após 24h sem atividade |
+
+### ⚔️ Ataques e Defesa
+
+O tempo para conquista de um território inimigo depende do seu nível e do número de atacantes:
+
+```
+Tempo = (Nível × 10 min) ÷ número de atacantes ativos
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ataques em grupo são altamente incentivados. Defensores ativos bloqueiam atacantes em proporção direta — 1 defensor anula 1 atacante.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧩 Funcionalidades
 
-## Learn More
+- 📍 **GPS em tempo real** — rastreamento contínuo do percurso
+- 🗺️ **Mapa com territórios** — visualização ao vivo de disputas
+- 🏆 **Desafios da comunidade** — criados pelos próprios jogadores
+- 👥 **Clãs** — domine territórios em grupo, com ranking próprio
+- 🔍 **Aba Descobrir** — encontre jogadores próximos e pedais acontecendo agora
+- 📊 **Rankings customizáveis** — filtre por período, métrica e amigos
+- 🔔 **Alertas sociais** — receba notificações quando seu território estiver sendo atacado
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Stack Tecnológica
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Função | Tecnologia |
+|--------|------------|
+| App Mobile | Flutter |
+| Mapas | Mapbox |
+| GPS | Native GPS + Background Geolocation |
+| Sistema de Territórios | H3 (Uber) |
+| Backend Realtime | Supabase |
+| Banco Geográfico | PostgreSQL + PostGIS |
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🏗️ Arquitetura do Projeto
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+lib/
+ ├── core/
+ ├── gps/
+ ├── map/
+ ├── territories/
+ ├── social/
+ ├── clans/
+ ├── auth/
+ ├── realtime/
+ ├── widgets/
+ └── screens/
+```
+
+---
+
+## 🚀 MVP — Funcionalidades Iniciais
+
+- [x] GPS para bicicleta
+- [x] Mapa com territórios
+- [x] Modo Livre e Modo Território
+- [x] Sistema de desafios
+- [x] Funcionalidades sociais básicas
+- [x] Rankings
+- [ ] Clãs (em desenvolvimento)
+- [ ] Eventos ao vivo
+
+---
+
+## 🎨 Identidade Visual
+
+| Cor | Hex |
+|-----|-----|
+| 🔵 Azul Escuro | `#001830` |
+| 🟢 Turquesa | `#00B6A9` |
+| 🟠 Laranja | `#FF6800` |
+| 🟡 Amarelo | `#FFC400` |
+| 🩷 Rosa | `#FF4DA6` |
+| 🟣 Roxo | `#6C4DFF` |
+| 🤍 Creme | `#FFF7ED` |
+
+---
+
+## 👥 Público-Alvo
+
+- Jovens e adultos em geral
+- Pessoas sedentárias ou iniciantes em atividade física
+- Ciclistas casuais
+- Pessoas interessadas em eventos sociais urbanos
+
+---
+
+## 🗺️ Territórios Iniciais (Salvador)
+
+- Barra
+- Ondina
+- Rio Vermelho
+- Pituba
+- Itapuã
+
+---
+
+## 🔮 Expansões Futuras
+
+- Guerras entre clãs em escala de cidade
+- Checkpoints e loot urbano
+- Clima afetando territórios
+- Sistema de temporadas
+- Realidade aumentada
+- IA de mobilidade urbana
+
+---
+
+<div align="center">
+
+**GIRO** — *Transformando Salvador em uma experiência viva, social e interativa através do movimento.*
+
+[🌐 Acessar o Projeto](https://giro-app-vtib.vercel.app/onboarding)
+
+</div>
