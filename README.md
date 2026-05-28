@@ -1,171 +1,142 @@
-<div align="center">
+# ⚡ CeloDuels
 
-# 🚲 GIRO
+> **Minigames P2P · 100% Onchain · Sem Intermediários**
 
-**Quanto mais você pedala, mais a cidade responde.**
+CeloDuels é uma plataforma de minigames descentralizada construída sobre a **Celo Mainnet**, onde dois jogadores podem se desafiar em duelos com apostas em cripto, sem servidores, sem custódia e sem intermediários.
 
-[![Status](https://img.shields.io/badge/status-em%20desenvolvimento-00B6A9?style=for-the-badge)]()
-[![Plataforma](https://img.shields.io/badge/plataforma-mobile-FF6800?style=for-the-badge)]()
-[![Cidade](https://img.shields.io/badge/cidade-Salvador%20(BA)-FFC400?style=for-the-badge)]()
-
-[🌐 Acessar o Projeto](https://giro-app-vtib.vercel.app/onboarding)
-
-</div>
+🔗 **Demo ao vivo:** [celoduels.vercel.app](https://celoduels.vercel.app/)
 
 ---
 
-## 📖 Sobre o Projeto
+## 🎮 O que é o CeloDuels?
 
-O **GIRO** é um aplicativo mobile gamificado que transforma a cidade em um grande tabuleiro vivo. Usando a bicicleta como principal meio de interação, os usuários conquistam e defendem **territórios urbanos reais**, participam de desafios e interagem socialmente enquanto pedalam.
-
-O foco não é performance esportiva — é **presença, frequência e interação social**.
-
-> Cidade inicial: **Salvador (BA)**
+CeloDuels permite que qualquer pessoa com uma carteira Web3 entre em uma partida P2P (peer-to-peer) contra outro jogador. As apostas são travadas em contrato inteligente, o resultado é determinado onchain via mecanismo **Commit-Reveal**, e o vencedor recebe o prêmio automaticamente — tudo sem intermediários.
 
 ---
 
-## 🎮 Modos de Jogo
+## ✨ Funcionalidades
 
-### 🟢 Modo Livre
-Ideal para iniciantes. Permite explorar a cidade, completar desafios, ganhar XP e socializar, sem pressão de disputa territorial.
-
-### 🔴 Modo Território
-O modo principal. Territórios possuem donos (jogadores ou clãs). Quanto mais tempo você pedala em uma área, mais forte o seu domínio se torna. Constância vale mais do que velocidade.
+- ⚡ **Sem servidor** — lógica 100% em smart contracts na Celo Mainnet
+- 🔒 **Commit-Reveal** — sistema à prova de trapaças: os jogadores submetem um hash do seu movimento antes de revelar, eliminando a possibilidade de front-running
+- 💰 **Aposta livre** — os jogadores definem o valor apostado em cada duelo
+- 🤝 **P2P puro** — sem casas de apostas, sem rake, sem custódia de fundos
+- 📱 **MiniPay compatível** — funciona nativamente no MiniPay e em qualquer carteira Web3 (MetaMask, etc.)
 
 ---
 
-## 🗺️ Sistema de Territórios
+## 🛠️ Tecnologias
 
-Cada território possui:
+| Camada | Tecnologia |
+|---|---|
+| Blockchain | [Celo Mainnet](https://celo.org/) |
+| Smart Contracts | Solidity |
+| Frontend | Next.js / React |
+| Deploy | Vercel |
+| Carteiras | MetaMask, MiniPay, WalletConnect |
 
-- **Dono** — jogador ou clã
-- **Nível de domínio** — de 1 a 10
-- **Estado** — 🟢 Estável · 🟡 Em disputa · 🔴 Vulnerável
+---
 
-| Ação | Regra |
-|------|-------|
-| Conquista inicial | 5 minutos pedalando na área |
-| Proteção inicial | 15 minutos após conquista |
-| Fortalecimento | +1 ponto de força a cada 5 min ativos |
-| Subir de nível | A cada 6 pontos de força acumulados |
-| Decaimento | −1 ponto após 24h sem atividade |
+## 🚀 Como jogar
 
-### ⚔️ Ataques e Defesa
+1. **Conecte sua carteira** — MetaMask, MiniPay ou qualquer carteira Web3 compatível com Celo
+2. **Crie ou entre em um duelo** — defina o valor da aposta
+3. **Faça seu commit** — envie o hash do seu movimento (sem revelar ainda)
+4. **Revele sua jogada** — após o adversário também commitar, ambos revelam
+5. **Receba o prêmio** — o contrato envia automaticamente para o vencedor
 
-O tempo para conquista de um território inimigo depende do seu nível e do número de atacantes:
+---
+
+## 🔐 Segurança — Mecanismo Commit-Reveal
+
+O Commit-Reveal é um padrão criptográfico que evita trapaças em jogos onchain:
 
 ```
-Tempo = (Nível × 10 min) ÷ número de atacantes ativos
+1. Jogador envia:  hash(movimento + salt)   ← ninguém vê o movimento real
+2. Após ambos commitarem, cada um revela:   movimento + salt
+3. O contrato verifica: hash(revelado) == commit original
+4. Resultado calculado de forma justa e transparente
 ```
 
-Ataques em grupo são altamente incentivados. Defensores ativos bloqueiam atacantes em proporção direta — 1 defensor anula 1 atacante.
+Isso garante que nenhum jogador consiga copiar a jogada do adversário antes de tomar sua decisão.
 
 ---
 
-## 🧩 Funcionalidades
+## 💻 Rodando localmente
 
-- 📍 **GPS em tempo real** — rastreamento contínuo do percurso
-- 🗺️ **Mapa com territórios** — visualização ao vivo de disputas
-- 🏆 **Desafios da comunidade** — criados pelos próprios jogadores
-- 👥 **Clãs** — domine territórios em grupo, com ranking próprio
-- 🔍 **Aba Descobrir** — encontre jogadores próximos e pedais acontecendo agora
-- 📊 **Rankings customizáveis** — filtre por período, métrica e amigos
-- 🔔 **Alertas sociais** — receba notificações quando seu território estiver sendo atacado
+```bash
+# Clone o repositório
+git clone https://github.com/seu-usuario/celoduels.git
+cd celoduels
 
----
+# Instale as dependências
+npm install
 
-## 🛠️ Stack Tecnológica
+# Configure as variáveis de ambiente
+cp .env.example .env.local
+# Edite .env.local com seu RPC da Celo e endereço do contrato
 
-| Função | Tecnologia |
-|--------|------------|
-| App Mobile | Flutter |
-| Mapas | Mapbox |
-| GPS | Native GPS + Background Geolocation |
-| Sistema de Territórios | H3 (Uber) |
-| Backend Realtime | Supabase |
-| Banco Geográfico | PostgreSQL + PostGIS |
-
----
-
-## 🏗️ Arquitetura do Projeto
-
+# Rode em modo de desenvolvimento
+npm run dev
 ```
-lib/
- ├── core/
- ├── gps/
- ├── map/
- ├── territories/
- ├── social/
- ├── clans/
- ├── auth/
- ├── realtime/
- ├── widgets/
- └── screens/
+
+Acesse [http://localhost:3000](http://localhost:3000).
+
+---
+
+## 📦 Variáveis de Ambiente
+
+```env
+NEXT_PUBLIC_CELO_RPC_URL=https://forno.celo.org
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
 ```
 
 ---
 
-## 🚀 MVP — Funcionalidades Iniciais
+## 📄 Smart Contracts
 
-- [x] GPS para bicicleta
-- [x] Mapa com territórios
-- [x] Modo Livre e Modo Território
-- [x] Sistema de desafios
-- [x] Funcionalidades sociais básicas
-- [x] Rankings
-- [ ] Clãs (em desenvolvimento)
-- [ ] Eventos ao vivo
+Os contratos estão deployados na **Celo Mainnet**. O código é verificado e auditável no [Celo Explorer](https://explorer.celo.org/).
 
----
+| Contrato | Endereço |
+|---|---|
+| CeloDuels Core | `0x...` |
 
-## 🎨 Identidade Visual
-
-| Cor | Hex |
-|-----|-----|
-| 🔵 Azul Escuro | `#001830` |
-| 🟢 Turquesa | `#00B6A9` |
-| 🟠 Laranja | `#FF6800` |
-| 🟡 Amarelo | `#FFC400` |
-| 🩷 Rosa | `#FF4DA6` |
-| 🟣 Roxo | `#6C4DFF` |
-| 🤍 Creme | `#FFF7ED` |
+> ⚠️ Substitua com os endereços reais dos contratos deployados.
 
 ---
 
-## 👥 Público-Alvo
+## 🌐 Rede Celo
 
-- Jovens e adultos em geral
-- Pessoas sedentárias ou iniciantes em atividade física
-- Ciclistas casuais
-- Pessoas interessadas em eventos sociais urbanos
+CeloDuels roda exclusivamente na **Celo Mainnet**:
 
----
-
-## 🗺️ Territórios Iniciais (Salvador)
-
-- Barra
-- Ondina
-- Rio Vermelho
-- Pituba
-- Itapuã
+| Parâmetro | Valor |
+|---|---|
+| Network Name | Celo Mainnet |
+| Chain ID | 42220 |
+| RPC URL | https://forno.celo.org |
+| Symbol | CELO |
+| Block Explorer | https://explorer.celo.org |
 
 ---
 
-## 🔮 Expansões Futuras
+## 🤝 Contribuindo
 
-- Guerras entre clãs em escala de cidade
-- Checkpoints e loot urbano
-- Clima afetando territórios
-- Sistema de temporadas
-- Realidade aumentada
-- IA de mobilidade urbana
+Contribuições são bem-vindas! Abra uma issue ou pull request.
+
+```bash
+git checkout -b feature/minha-feature
+git commit -m "feat: adiciona nova feature"
+git push origin feature/minha-feature
+```
+
+---
+
+## 📜 Licença
+
+MIT © CeloDuels
 
 ---
 
 <div align="center">
-
-**GIRO** — *Transformando Salvador em uma experiência viva, social e interativa através do movimento.*
-
-[🌐 Acessar o Projeto](https://giro-app-vtib.vercel.app/onboarding)
-
+  <strong>⚡ Powered by Celo Mainnet</strong><br/>
+  Construído para a comunidade Web3
 </div>
