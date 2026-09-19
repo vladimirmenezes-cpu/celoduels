@@ -56,9 +56,9 @@ function Button({
   children: React.ReactNode; onClick?: () => void; disabled?: boolean;
   variant?: "solid" | "outline" | "ghost"; accent?: string; className?: string;
 }) {
-  const base = "inline-flex items-center justify-center gap-2 rounded-xl font-display font-semibold tracking-wide transition-[transform,background-color,border-color,box-shadow] duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100";
+  const base = "inline-flex items-center justify-center gap-2 rounded-xl font-display font-semibold transition-[transform,background-color,border-color,box-shadow] duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100";
   const styles: Record<string, React.CSSProperties> = {
-    solid: { background: disabled ? "var(--border)" : accent, color: disabled ? "var(--ink-faint)" : "var(--brand-ink)", boxShadow: disabled ? "none" : `0 8px 24px -8px color-mix(in srgb, ${accent} 55%, transparent)` },
+    solid: { background: disabled ? "var(--border)" : accent, color: disabled ? "var(--ink-faint)" : "var(--brand-ink)", boxShadow: disabled ? "none" : "var(--shadow-sm)" },
     outline: { background: "transparent", border: `1px solid ${accent}`, color: accent },
     ghost: { background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink-muted)" },
   };
@@ -225,12 +225,12 @@ export default function Home() {
         <div>
           <div
             className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl text-2xl"
-            style={{ background: "var(--brand)", boxShadow: "0 0 48px -8px var(--brand)" }}
+            style={{ background: "var(--brand)", boxShadow: "var(--shadow-md)" }}
           >
             ⚡
           </div>
-          <h1 className="font-display text-5xl font-bold tracking-wide text-ink sm:text-6xl">
-            CELODUELS
+          <h1 className="font-display text-5xl font-bold tracking-tight text-ink sm:text-6xl">
+            CeloDuels
           </h1>
           <p className="mt-2 text-sm font-medium" style={{ color: "var(--brand)" }}>
             Powered by Celo Mainnet
@@ -285,8 +285,8 @@ export default function Home() {
       </div>
 
       <div className="w-[260px] shrink-0 border-b border-border p-6">
-        <div className="mb-3 font-display text-xs font-bold tracking-widest" style={{ color: "var(--brand)" }}>
-          🏆 LEADERBOARD
+        <div className="mb-3 text-xs font-semibold text-ink-muted">
+          Leaderboard
         </div>
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-3 border-b border-border-soft py-2 last:border-0">
@@ -298,8 +298,8 @@ export default function Home() {
       </div>
 
       <div className="w-[260px] shrink-0 flex-1 overflow-y-auto p-6 thin-scroll">
-        <div className="mb-3 font-display text-xs font-bold tracking-widest" style={{ color: "var(--brand)" }}>
-          📜 HISTÓRICO
+        <div className="mb-3 text-xs font-semibold text-ink-muted">
+          Histórico
         </div>
         <p className="text-sm text-ink-faint">Nenhuma partida ainda.</p>
       </div>
@@ -331,9 +331,9 @@ export default function Home() {
       </button>
       <h1
         onClick={() => setScreen("dashboard")}
-        className="cursor-pointer font-display text-xl font-bold tracking-wide text-ink"
+        className="cursor-pointer font-display text-xl font-bold tracking-tight text-ink"
       >
-        CELODUELS
+        CeloDuels
       </h1>
       {screen !== "dashboard" && (
         <Button onClick={() => setScreen("dashboard")} variant="ghost" className="px-3.5 py-1.5 text-sm">
@@ -367,9 +367,10 @@ export default function Home() {
           <main className="mx-auto w-full max-w-[560px] p-8">
             <div className="mb-8 text-center">
               <div className="mb-2 text-6xl">{game.emoji}</div>
-              <h2 className="font-display text-3xl font-bold text-ink">{game.name.toUpperCase()}</h2>
-              <p className="mt-1 text-sm text-ink-faint">
-                Duelo #{activeGameId} · <span style={{ color: game.color }}>🏆 Prêmio: {(parseFloat(stakeDisplay) * 2 * 0.99).toFixed(4)} CELO</span>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-ink">{game.name}</h2>
+              <p className="mt-1 text-sm text-ink-faint">Duelo #{activeGameId}</p>
+              <p className="text-sm font-medium" style={{ color: game.color }}>
+                Prêmio: {(parseFloat(stakeDisplay) * 2 * 0.99).toFixed(4)} CELO
               </p>
             </div>
 
@@ -405,7 +406,7 @@ export default function Home() {
 
             {selectedMove && (
               <div className="mb-4 rounded-xl border border-border-soft bg-surface p-4 text-center">
-                <p className="mb-1 text-xs tracking-wide text-ink-faint">SEU MOVE</p>
+                <p className="mb-1 text-xs text-ink-faint">Seu move</p>
                 <span className="text-3xl">{game.moves.find((m) => m.value === selectedMove)?.emoji}</span>
                 <span className="ml-2 font-display text-base font-bold" style={{ color: game.color }}>
                   {game.moves.find((m) => m.value === selectedMove)?.label}
@@ -435,7 +436,7 @@ export default function Home() {
           <Header />
           <main className="p-8">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="font-display text-3xl font-bold text-ink">PARTIDAS ABERTAS</h2>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-ink">Partidas abertas</h2>
               <Button onClick={() => refetchGames()} variant="ghost" className="px-4 py-2 text-sm">
                 ↻ Atualizar
               </Button>
@@ -512,7 +513,7 @@ export default function Home() {
             <div className="mb-8 flex items-center gap-4">
               <span className="text-4xl">{game.emoji}</span>
               <div>
-                <h2 className="font-display text-3xl font-bold text-ink">{game.name.toUpperCase()}</h2>
+                <h2 className="font-display text-3xl font-bold tracking-tight text-ink">{game.name}</h2>
                 <p className="text-sm text-ink-faint">{game.description}</p>
               </div>
             </div>
@@ -534,7 +535,6 @@ export default function Home() {
                     style={{
                       borderColor: active ? game.color : "var(--border)",
                       background: active ? `color-mix(in srgb, ${game.color} 10%, var(--surface))` : "var(--surface)",
-                      boxShadow: active ? `0 0 20px -4px color-mix(in srgb, ${game.color} 50%, transparent)` : "none",
                     }}
                   >
                     <div className="mb-1.5 text-3xl">{m.emoji}</div>
@@ -626,53 +626,43 @@ export default function Home() {
         <Header />
         <main className="flex-1 p-8">
           <div className="mb-8">
-            <h2 className="font-display text-4xl font-bold text-ink">CRIAR NOVO DUELO</h2>
+            <h2 className="font-display text-4xl font-bold tracking-tight text-ink">Criar novo duelo</h2>
             <p className="mt-1 text-sm text-ink-faint">
-              Celo Mainnet · Taxa 1% · Commit-reveal · Resultado 100% onchain
+              Cada duelo roda na Celo Mainnet com taxa de 1%, e o resultado é decidido on-chain por commit-reveal.
             </p>
           </div>
 
           <button
             onClick={() => { setScreen("lobby"); refetchGames(); }}
-            className="hoverable mb-8 flex w-full items-center gap-4 rounded-2xl border p-6 text-left active:scale-[0.99]"
-            style={{ background: "var(--surface)", borderColor: "color-mix(in srgb, var(--brand) 25%, transparent)" }}
+            className="mb-8 flex w-full items-center gap-4 rounded-xl border border-border bg-surface p-5 text-left transition-colors duration-150 hover:border-border-soft active:scale-[0.99]"
           >
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl"
-              style={{ background: "color-mix(in srgb, var(--brand) 14%, transparent)", border: "1px solid color-mix(in srgb, var(--brand) 30%, transparent)" }}
-            >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border text-xl">
               🎮
             </div>
             <div className="flex-1">
-              <div className="font-display text-lg font-bold" style={{ color: "var(--brand)" }}>Buscar partida</div>
+              <div className="font-display text-base font-semibold text-ink">Buscar partida</div>
               <div className="text-sm text-ink-faint">Entrar em um duelo existente</div>
             </div>
-            <div
-              className="rounded-full px-3.5 py-1 font-display text-sm font-bold"
-              style={{ background: "color-mix(in srgb, var(--brand) 14%, transparent)", border: "1px solid color-mix(in srgb, var(--brand) 30%, transparent)", color: "var(--brand)" }}
-            >
+            <div className="rounded-full border border-border px-3 py-1 text-sm text-ink-muted">
               {openCount} aberto{openCount !== 1 ? "s" : ""}
             </div>
           </button>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="overflow-hidden rounded-xl border border-border">
             {GAMES.map((game) => (
               <button
                 key={game.type}
                 onClick={() => goToGame(game)}
-                className="hoverable rounded-2xl border p-6 text-left active:scale-[0.98]"
-                style={{
-                  background: `linear-gradient(135deg, color-mix(in srgb, ${game.color} 10%, transparent), var(--surface))`,
-                  borderColor: `color-mix(in srgb, ${game.color} 20%, transparent)`,
-                }}
+                className="flex w-full items-center gap-4 border-b border-border bg-surface p-5 text-left transition-colors duration-150 last:border-b-0 hover:bg-[color-mix(in_srgb,var(--surface)_85%,white)] active:scale-[0.99]"
+                style={{ borderLeft: `3px solid ${game.color}` }}
               >
-                <div className="mb-3 text-4xl">{game.emoji}</div>
-                <div className="mb-1 font-display text-lg font-bold text-ink">{game.name}</div>
-                <div className="mb-4 text-sm text-ink-faint">{game.description}</div>
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-sm font-bold" style={{ color: game.color }}>Aposta livre</span>
-                  <span style={{ color: game.color }}>›</span>
+                <span className="text-2xl">{game.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-base font-semibold text-ink">{game.name}</div>
+                  <div className="truncate text-sm text-ink-faint">{game.description}</div>
                 </div>
+                <span className="hidden shrink-0 text-sm text-ink-muted sm:inline">Aposta livre</span>
+                <span className="shrink-0 text-ink-faint">›</span>
               </button>
             ))}
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Rajdhani, Manrope } from "next/font/google";
+import { Space_Grotesk, Work_Sans } from "next/font/google";
 import "./globals.css";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,16 +8,16 @@ import { config } from "./lib/wagmi";
 
 const queryClient = new QueryClient();
 
-const rajdhani = Rajdhani({
+const spaceGrotesk = Space_Grotesk({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["500", "600", "700"],
 });
 
-const manrope = Manrope({
+const workSans = Work_Sans({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
 });
 
 export default function RootLayout({
@@ -28,11 +28,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        {<meta name="talentapp:project_verification" content="a4c493933a3e827a06c621863cd0a3c9956d223ab5b4653bfa35b802cc5df20ee12fce832f15905e9c7f618a083ea072e4fa57a39229719504594635301145c7" />}
+        {/* MANTENHA a sua tag <meta name="talentapp:project_verification" ...>
+            original aqui — eu não tinha o valor completo no print pra copiar sem risco de errar. */}
       </head>
       <body
         suppressHydrationWarning
-        className={`${rajdhani.variable} ${manrope.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${workSans.variable} antialiased`}
       >
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>

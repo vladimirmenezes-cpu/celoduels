@@ -1,28 +1,31 @@
 @import "tailwindcss";
 
-
+/* ── Design tokens ──────────────────────────────────────────────── */
 :root {
-  --bg: #0a0908;
-  --bg-raised: #131110;
-  --bg-sunken: #050403;
-  --border: #262019;
-  --border-soft: #1a1611;
+  --bg: #131211;
+  --bg-raised: #1c1a17;
+  --bg-sunken: #0c0b0a;
+  --border: #2b2722;
+  --border-soft: #201d19;
 
-  --ink: #f3ede2;
-  --ink-muted: #948c7d;
-  --ink-faint: #4a4438;
+  --ink: #ece6d9;
+  --ink-muted: #948c7c;
+  --ink-faint: #5c5648;
 
-  --brand: #f0c85a;
-  --brand-ink: #17140c;
+  --brand: #c08a3e;
+  --brand-ink: #171310;
 
-  --game-rps: #4ade80;
-  --game-coin: #f0c85a;
-  --game-oddeven: #6ea8fe;
-  --game-dilemma: #c993f5;
+  --game-rps: #7fa87a;
+  --game-coin: #c9a86a;
+  --game-oddeven: #7b9cc2;
+  --game-dilemma: #a58bbd;
 
-  --danger: #f27a6b;
-  --success: #4ade80;
-  --warning: #f0c85a;
+  --danger: #b5695c;
+  --success: #7fa87a;
+  --warning: #c9a86a;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.45);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -64,7 +67,7 @@ body {
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
 }
 
-
+/* ── Motion ──────────────────────────────────────────────────────── */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -113,7 +116,7 @@ body {
   }
 }
 
-
+/* thin, on-brand scrollbar for the sidebar */
 .thin-scroll::-webkit-scrollbar {
   width: 6px;
 }
